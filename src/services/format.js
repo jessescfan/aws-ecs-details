@@ -11,26 +11,20 @@ const betterTaskDetails = async ({ profile, region, serviceName }) => {
         const tasks = await client.tasks({ cluster, serviceName })
         const describeTasks = await client.describeTasks({ cluster, taskArns: tasks['taskArns'] ?? [] })
 
-        accCluster[cluster] = describeTasks['tasks'].reduce((acc, task) => {
-            const containersData = task['containers'].reduce((cacc, container) => {
-                const fields = ['healthStatus', 'image', 'lastStatus', 'cpu', 'memory', 'name']
-                const contDetails = fields.reduce((facc, field) => {
-                    facc[field] = container[field]
+        const details = describeTasks['tasks'].reduce((acc, task) => {
+            acc[task['group']] = acc[task['group']] ?? []
+            const tasks = {
+                details: task,
+                containers: task['containers'],
+            }
 
-                    return facc
-                }, {})
-                const privateIpv4Address = container['networkInterfaces'].map((interface) => interface.privateIpv4Address).join(',')
-
-                cacc[contDetails['name']] = { ...contDetails, privateIpv4Address }
-                return cacc
-            }, {})
-
-            acc[task['group']] = { ...acc[task['group']], [task['taskArn']]: containersData }
+            acc[task['group']].push(tasks)
             return acc
         }, {})
 
+        accCluster.push(details)
         return accCluster
-    }, {})
+    }, [])
 }
 
 

@@ -9,20 +9,38 @@ const init = async () => {
     try {
         const results = await betterTaskDetails({ profile, region, serviceName })
 
-        Object.keys(results).forEach((clusterKey) => {
-            const tasks = results[clusterKey]
+        //Console output
+        Object.values(results).forEach((cluster) => {
+            Object.keys(cluster).forEach((serviceKey) => {
+                console.group(serviceKey)
+                const tasks = cluster[serviceKey] //array
 
-            Object.keys(tasks).forEach((key) => {
-                const task = tasks[key]
-                console.group("Service:", key)
-                Object.keys(task).forEach((taskKey) => {
-                    console.group("Task:", taskKey)
-                    console.table(task[taskKey])
+                tasks.forEach((task) => {
+                    console.table({
+                        [task.details.taskArn]: {
+                            taskDefinitionArn: task.details.taskDefinitionArn,
+                            connectivity: task.details.connectivity,
+                        }
+                    })
+
+                    console.group()
+                    const containerTable = task.containers.reduce((accCon, container) => {
+                        const fields = ['name', 'healthStatus', 'image', 'lastStatus', 'cpu', 'memory']
+
+                        accCon[container.name] = fields.reduce((accField, field) => {
+                            accField[field] = container[field]
+
+                            return accField
+                        }, {})
+
+                        return accCon
+                    }, {})
+                    console.table(containerTable)
                     console.groupEnd()
                 })
+                //serviceKey
                 console.groupEnd()
             })
-            console.groupEnd()
         })
     } catch (e) {
         console.error(`
