@@ -1,12 +1,9 @@
 const { betterTaskDetails } = require('#services/format')
-
 const args = process.argv.slice(2)
 const profile = args.find((arg) => arg.includes('--profile'))?.split('=')[1] ?? 'default'
 const serviceName = args.find((arg) => arg.includes('--service'))?.split('=')[1] ?? undefined
 const region = args.find((arg) => arg.includes('--region'))?.split('=')[1] ?? 'us-east-1'
 const getLastItem = str => str.substring(str.lastIndexOf('/') + 1)
-
-
 
 const init = async () => {
     try {
