@@ -11,15 +11,18 @@ const betterTaskDetails = async ({ profile, region, serviceName }) => {
         const tasks = await client.tasks({ cluster, serviceName })
         const describeTasks = await client.describeTasks({ cluster, taskArns: tasks['taskArns'] ?? [] })
 
-        const details = describeTasks['tasks'].reduce((acc, task) => {
-            acc[task['group']] = acc[task['group']] ?? []
+        const details = await describeTasks['tasks'].reduce(async (acc, task) => {
+            const accumulator = await acc
+            const result = await client.taskDefinition({ taskDefinition: task.taskDefinitionArn })
+            const taskDefinitions = await client.taskDefinitions({ familyPrefix: result.taskDefinition.family })
+            accumulator[task['group']] = accumulator[task['group']] ?? []
             const tasks = {
-                details: task,
+                details: { ...task, mostRecentTaskDefs: taskDefinitions.taskDefinitionArns },
                 containers: task['containers'],
             }
 
-            acc[task['group']].push(tasks)
-            return acc
+            accumulator[task['group']].push(tasks)
+            return accumulator
         }, {})
 
         accCluster.push(details)
