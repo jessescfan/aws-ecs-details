@@ -10,16 +10,33 @@ const init = async () => {
         const results = await betterTaskDetails({ profile, region, serviceName })
 
         //Console output
-        Object.values(results).forEach((cluster) => {
-            Object.keys(cluster).forEach((serviceKey) => {
+        results.forEach((cluster) => {
+            //cluster
+            console.group('Cluster', cluster.details)
+            cluster.services.forEach((service) => {
+                //service
+                console.group('Service', service.details.serviceName)
 
-                console.table({ service: serviceKey })
-                console.group()
-                const tasks = cluster[serviceKey] //array
+                const deploymentTable = service.details.deployments.reduce((accDep, deployment) => {
+                    const fields = ['desiredCount', 'runningCount', 'rolloutState', 'rolloutStateReason', 'taskDefinition', 'status', 'createdAt', 'updatedAt']
 
-                tasks.forEach((task) => {
-                    //containers
-                    console.group()
+                    accDep.push(
+                        fields.reduce((accField, field) => {
+                            accField[field] = deployment[field]
+
+                            return accField
+                        }, [])
+                    )
+
+                    return accDep
+                }, [])
+
+                console.log('Deployments')
+                console.table(deploymentTable)
+
+                service.tasks.forEach((task) => {
+                    //Containers
+                    console.group('Containers')
                     const containerTable = task.containers.reduce((accCon, container) => {
                         const fields = ['name', 'healthStatus', 'image', 'lastStatus', 'cpu', 'memory']
 
@@ -38,13 +55,18 @@ const init = async () => {
                         return accCon
                     }, {})
 
-
                     console.table(containerTable)
+
+                    //Containers
                     console.groupEnd()
                 })
-                //serviceKey
+
+                //service
                 console.groupEnd()
             })
+
+            //cluster
+            console.groupEnd()
         })
     } catch (e) {
         console.error(`

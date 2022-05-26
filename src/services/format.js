@@ -8,24 +8,34 @@ const betterTaskDetails = async ({ profile, region, serviceName }) => {
     }
 
     return clusters['clusterArns'].reduce(async (accCluster, cluster) => {
-        const tasks = await client.tasks({ cluster, serviceName })
-        const describeTasks = await client.describeTasks({ cluster, taskArns: tasks['taskArns'] ?? [] })
+        const services = await client.services({ cluster })
+        const serviceNames = serviceName ? [serviceName] : services.serviceArns
 
-        const details = await describeTasks['tasks'].reduce(async (acc, task) => {
-            const accumulator = await acc
-            const result = await client.taskDefinition({ taskDefinition: task.taskDefinitionArn })
-            const taskDefinitions = await client.taskDefinitions({ familyPrefix: result.taskDefinition.family })
-            accumulator[task['group']] = accumulator[task['group']] ?? []
-            const tasks = {
-                details: { ...task, mostRecentTaskDefs: taskDefinitions.taskDefinitionArns },
-                containers: task['containers'],
-            }
+        const describeServices = await client.describeServices({ cluster, services: serviceNames })
 
-            accumulator[task['group']].push(tasks)
-            return accumulator
-        }, {})
+        const serviceData = await describeServices.services.reduce(async (accServices, service) => {
+            const servicesAccumulator = await accServices
+            const tasks = await client.tasks({ cluster, serviceName: service.serviceArn })
+            const describeTasks = await client.describeTasks({ cluster, taskArns: tasks['taskArns'] ?? [] })
+            const taskData = await describeTasks['tasks'].reduce(async (accTasks, task) => {
+                const tasksAccumulator = await accTasks
+                const result = await client.taskDefinition({ taskDefinition: task.taskDefinitionArn })
+                const taskDefinitions = await client.taskDefinitions({ familyPrefix: result.taskDefinition.family })
+                const tasks = {
+                    details: { ...task, mostRecentTaskDefs: taskDefinitions.taskDefinitionArns },
+                    containers: task['containers'],
+                }
 
-        accCluster.push(details)
+                tasksAccumulator.push(tasks)
+                return tasksAccumulator
+            }, [])
+
+            servicesAccumulator.push({ details: service, tasks: taskData })
+
+            return servicesAccumulator
+        }, [])
+
+        accCluster.push({ details: cluster, services: serviceData })
         return accCluster
     }, [])
 }

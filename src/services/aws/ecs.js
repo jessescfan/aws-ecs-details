@@ -1,11 +1,12 @@
 const {
+    DescribeServicesCommand,
+    DescribeTaskDefinitionCommand,
+    DescribeTasksCommand,
     ECSClient,
     ListClustersCommand,
-    ListTasksCommand,
-    DescribeTasksCommand,
+    ListServicesCommand,
     ListTaskDefinitionsCommand,
-    ListTaskDefinitionFamiliesCommand,
-    DescribeTaskDefinitionCommand
+    ListTasksCommand
 } = require("@aws-sdk/client-ecs")
 const { fromIni } = require("@aws-sdk/credential-providers")
 
@@ -16,6 +17,16 @@ class ECS {
 
     clusters = async () => {
         const command = new ListClustersCommand({ maxResults: 10 })
+        return await this.client.send(command)
+    }
+
+    services = async ({ cluster }) => {
+        const command = new ListServicesCommand({ cluster, maxResults: 10 })
+        return await this.client.send(command)
+    }
+
+    describeServices = async ({ cluster, services }) => {
+        const command = new DescribeServicesCommand({ cluster, services, maxResults: 10 })
         return await this.client.send(command)
     }
 
